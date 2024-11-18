@@ -835,6 +835,15 @@ if __name__ == "__main__":
 
     main(config)
 
+if __name__ == "__main__":
+    # Parse configuration
+    config, unparsed = get_config()
+    
+    # Example of a desired AU vector for testing
+    desired_au_example = [0.5] * config.dim_labels  # Replace with actual AU values
+    image_path_example = "path/to/your/image.jpg"  # Path to your input image
+
+    test_single_image(config, image_path_example, desired_au_example)
 
 #
 # main.py ends here
