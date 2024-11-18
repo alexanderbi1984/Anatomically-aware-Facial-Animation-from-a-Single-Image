@@ -70,7 +70,7 @@ def load_data(data_dir, data_type):
     with open(csv_file, 'r') as f:
         lines = f.readlines()
         imgs_path = [os.path.join(file_dir, line.strip()) for line in lines]
-        imgs_path = sorted(imgs_path[0:140000])
+        # imgs_path = sorted(imgs_path[0:140000])
 
     #return common_ids, AU_data
     return imgs_path, AU_data

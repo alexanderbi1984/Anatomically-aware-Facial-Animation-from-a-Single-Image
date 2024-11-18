@@ -84,7 +84,8 @@ def train(config):
         dataset=train_data,
         batch_size=config.batch_size,
         num_workers=4,
-        shuffle=True
+        shuffle=True,
+        drop_last=True,
     )
 
     # Create model instance.
@@ -535,49 +536,166 @@ def save_numpy_img(np_img):
     np_img = Image.fromarray(np_img.astype(np.uint8))
     return np_img
 
+# def test(config):
+#     """Test routine"""
+#
+#     # Initialize Dataset for testing.
+#     test_data = FacesDataset(
+#         config, mode="test",
+#     )
+#
+#     # Create data loader for the test dataset with 4 number of workers and no
+#     # shuffling.
+#     te_data_loader = DataLoader(
+#         dataset=test_data,
+#         batch_size=config.batch_size,
+#         num_workers=4,
+#         shuffle=False
+#     )
+#
+#     # Create model
+#     G = Generate_GAN(
+#         config.nchannel_base_g, config.dim_labels, config.num_resnet_g
+#     )
+#     D = Discriminate_GAN(
+#         config.trimg_size, config.nchannel_base_d, config.dim_labels, config.num_resnet_d
+#     )
+#     # move to GPU
+#     if torch.cuda.is_available():
+#         G = G.cuda()
+#         D = D.cuda()
+#
+#     # Load our best model and set model for testing
+#     # reference: https://pytorch.org/docs/stable/torch.html?highlight=load#torch.load
+#     load_res = torch.load(
+#         os.path.join(config.save_dir, "checkpoint.pth"), map_location = lambda storage, loc: storage
+#     )
+#     G.load_state_dict(load_res["generator"])
+#     D.load_state_dict(load_res["discriminator"])
+#
+#     """
+#     pretrained_dict = {k: v for k, v in load_gen.items() if k in G.state_dict()}
+#     for k, v in load_gen.items():
+#         print(k)
+#     G.load_state_dict(pretrained_dict)
+#     """
+#
+#     G.eval()
+#     D.eval()
+#
+#     # Implement The Test loop
+#     prefix = "Testing: "
+#     te_loss = []
+#     index_result = 0
+#     for batch_idx, batch in enumerate(te_data_loader):
+#
+#         # Split the data
+#         x, y = batch
+#
+#         # Send data to GPU if we have one
+#         if torch.cuda.is_available():
+#             print("GPU is available")
+#             x = x.cuda()
+#             y = y.cuda()
+#
+# 	    # Don't invoke gradient computation
+#         with torch.no_grad():
+#             # out_test_frame = [x.float().numpy()]
+#             out_test_frame = [x.float().cpu().numpy()]
+#
+#
+#             from PIL import Image
+#
+#             img_name = random.choice(test_data.data)
+#             img_id = str(os.path.splitext(os.path.basename(img_name))[0])
+#
+#             test_img = Image.open(img_name).convert("RGB")
+#             # make pytorch object and normalize it
+#             test_img_tensor = test_data.list_trans(test_img)
+#             # print(test_img_tensor)
+#             desired_AU = torch.FloatTensor(test_data.label[img_id]/5.0)
+#
+#             # No. of fake imgs to produce
+#             # Change this '5' here in range() to generate different
+#             # number of interpolation imgs.
+#             for idx in range(5):
+#             	# control hyper-parameter alpha
+#                 hyper_alpha = (idx + 1.) / float(5)
+#                 cur_tar_aus = hyper_alpha * desired_AU + (1 - hyper_alpha) * y
+#                 # cur_tar_aus = hyper_alpha * np.random.uniform(0, 1, size=(config.batch_size, 17))
+#                 # cur_tar_aus = torch.from_numpy(cur_tar_aus/5.0).float()
+#                 # print(y.shape, "--", cur_tar_aus.shape)
+#                 if torch.cuda.is_available():
+#                 	cur_tar_aus.cuda()
+#                 	test_img_tensor.cuda()
+#                 # print(cur_tar_aus)
+#                 # test_batch = {'src_img': x, 'tar_aus': cur_tar_aus, 'src_aus':y, 'tar_img':test_img_tensor}
+#
+#                 # Fake image Generation
+#                 attmask_fake, colormask_fake = G(x, cur_tar_aus)
+#                 fake_img = attmask_fake * x + (1 - attmask_fake) * colormask_fake
+#
+#                 # print(fake_img)
+#                 out_test_frame.append(fake_img.cpu().float().numpy())
+#
+#             out_test_frame.append(test_img_tensor.float().numpy())
+#             # print(test_img_tensor.shape, " ---- ", len(out_test_frame))
+#             # print(len(batch[0]))
+#
+#         length_inter = len(out_test_frame) - 1
+#
+#         for frame in range(len(batch[0])):
+#             if not config.as_gif:
+#                 animation_frames = np.array(save_numpy_img(out_test_frame[0][frame]))
+#                 for animation_num in range(1, length_inter):
+#                     print(animation_frames.shape, out_test_frame[animation_num][frame].shape)
+#                     temp_out_test_frame = np.array(save_numpy_img(out_test_frame[animation_num][frame]))
+#                     # ValueError: axes don't match array
+#                     animation_frames = np.concatenate((animation_frames, temp_out_test_frame), axis=1)
+#                 animation_frames = Image.fromarray(animation_frames)
+#                 # save static image
+#                 output_path = os.path.join(config.result_dir, "{}_.jpg".format(index_result))
+#                 animation_frames.save(output_path)
+#             else:
+#                 imgs_frames = []
+#                 for animation_num in range(length_inter):
+#                     temp_out_test_frame = np.array(save_numpy_img(out_test_frame[animation_num][frame]))
+#                     imgs_frames.extend([temp_out_test_frame for _ in range(3)])
+#                 # save gif image
+#                 output_path = os.path.join(config.result_dir, "{}_.gif".format(index_result))
+#                 imageio.mimsave(output_path, imgs_frames)
+#
+#             index_result += 1
+#
+#             print("Testing _{}_ Done!".format(idx))
 def test(config):
     """Test routine"""
 
     # Initialize Dataset for testing.
-    test_data = FacesDataset(
-        config, mode="test",
-    )
+    test_data = FacesDataset(config, mode="test")
 
-    # Create data loader for the test dataset with 4 number of workers and no
-    # shuffling.
+    # Create data loader for the test dataset
     te_data_loader = DataLoader(
         dataset=test_data,
         batch_size=config.batch_size,
         num_workers=4,
-        shuffle=False
+        shuffle=False,
+        drop_last=True,
     )
 
     # Create model
-    G = Generate_GAN(
-        config.nchannel_base_g, config.dim_labels, config.num_resnet_g
-    )
-    D = Discriminate_GAN(
-        config.trimg_size, config.nchannel_base_d, config.dim_labels, config.num_resnet_d
-    )
-    # move to GPU
-    if torch.cuda.is_available():
-        G = G.cuda()
-        D = D.cuda()
+    G = Generate_GAN(config.nchannel_base_g, config.dim_labels, config.num_resnet_g)
+    D = Discriminate_GAN(config.trimg_size, config.nchannel_base_d, config.dim_labels, config.num_resnet_d)
 
-    # Load our best model and set model for testing
-    # reference: https://pytorch.org/docs/stable/torch.html?highlight=load#torch.load
-    load_res = torch.load(
-        os.path.join(config.save_dir, "checkpoint.pth"), map_location = lambda storage, loc: storage
-    )
+    # Move to GPU if available
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    G.to(device)
+    D.to(device)
+
+    # Load the best model
+    load_res = torch.load(os.path.join(config.save_dir, "checkpoint.pth"), map_location=device)
     G.load_state_dict(load_res["generator"])
     D.load_state_dict(load_res["discriminator"])
-
-    """
-    pretrained_dict = {k: v for k, v in load_gen.items() if k in G.state_dict()}
-    for k, v in load_gen.items():
-        print(k)
-    G.load_state_dict(pretrained_dict)
-    """
 
     G.eval()
     D.eval()
@@ -592,51 +710,35 @@ def test(config):
         x, y = batch
 
         # Send data to GPU if we have one
-        if torch.cuda.is_available():
-            x = x.cuda()
-            y = y.cuda()
+        x = x.to(device)
+        y = y.to(device)
 
-	    # Don't invoke gradient computation
+        # Don't invoke gradient computation
         with torch.no_grad():
-            out_test_frame = [x.float().numpy()]
+            out_test_frame = [x.float().cpu().numpy()]
 
             from PIL import Image
-
             img_name = random.choice(test_data.data)
             img_id = str(os.path.splitext(os.path.basename(img_name))[0])
-
             test_img = Image.open(img_name).convert("RGB")
-            # make pytorch object and normalize it
-            test_img_tensor = test_data.list_trans(test_img)
-            # print(test_img_tensor)
-            desired_AU = torch.FloatTensor(test_data.label[img_id]/5.0)
+            test_img_tensor = test_data.list_trans(test_img).to(device)  # Move to the same device
+            desired_AU = torch.FloatTensor(test_data.label[img_id] / 5.0).to(device)  # Ensure it's on the same device
 
             # No. of fake imgs to produce
-            # Change this '5' here in range() to generate different 
-            # number of interpolation imgs.
             for idx in range(5):
-            	# control hyper-parameter alpha
                 hyper_alpha = (idx + 1.) / float(5)
                 cur_tar_aus = hyper_alpha * desired_AU + (1 - hyper_alpha) * y
-                # cur_tar_aus = hyper_alpha * np.random.uniform(0, 1, size=(config.batch_size, 17))
-                # cur_tar_aus = torch.from_numpy(cur_tar_aus/5.0).float()
-                # print(y.shape, "--", cur_tar_aus.shape)
-                if torch.cuda.is_available():
-                	cur_tar_aus.cuda()
-                	test_img_tensor.cuda()
-                # print(cur_tar_aus)
-                # test_batch = {'src_img': x, 'tar_aus': cur_tar_aus, 'src_aus':y, 'tar_img':test_img_tensor}
+
+                # Ensure cur_tar_aus is on the same device
+                cur_tar_aus = cur_tar_aus.to(device)
 
                 # Fake image Generation
                 attmask_fake, colormask_fake = G(x, cur_tar_aus)
                 fake_img = attmask_fake * x + (1 - attmask_fake) * colormask_fake
 
-                # print(fake_img)                
                 out_test_frame.append(fake_img.cpu().float().numpy())
 
-            out_test_frame.append(test_img_tensor.float().numpy())
-            # print(test_img_tensor.shape, " ---- ", len(out_test_frame))
-            # print(len(batch[0]))
+            out_test_frame.append(test_img_tensor.cpu().float().numpy())
 
         length_inter = len(out_test_frame) - 1
 
@@ -644,12 +746,9 @@ def test(config):
             if not config.as_gif:
                 animation_frames = np.array(save_numpy_img(out_test_frame[0][frame]))
                 for animation_num in range(1, length_inter):
-                    print(animation_frames.shape, out_test_frame[animation_num][frame].shape)
                     temp_out_test_frame = np.array(save_numpy_img(out_test_frame[animation_num][frame]))
-                    # ValueError: axes don't match array
                     animation_frames = np.concatenate((animation_frames, temp_out_test_frame), axis=1)
                 animation_frames = Image.fromarray(animation_frames)
-                # save static image
                 output_path = os.path.join(config.result_dir, "{}_.jpg".format(index_result))
                 animation_frames.save(output_path)
             else:
@@ -657,13 +756,12 @@ def test(config):
                 for animation_num in range(length_inter):
                     temp_out_test_frame = np.array(save_numpy_img(out_test_frame[animation_num][frame]))
                     imgs_frames.extend([temp_out_test_frame for _ in range(3)])
-                # save gif image
                 output_path = os.path.join(config.result_dir, "{}_.gif".format(index_result))
                 imageio.mimsave(output_path, imgs_frames)
-                
-            index_result += 1
 
+            index_result += 1
             print("Testing _{}_ Done!".format(idx))
+
 
 def main(config):
     """The main function."""

@@ -137,6 +137,8 @@ class Generate_GAN(build_resnet):
         target = target.unsqueeze(2).unsqueeze(3)
         target = target.expand(target.size(0), target.size(1), x.size(2), x.size(3))
         # Concatenate label embedding and image to produce input
+        # print(f"x shape: {x.shape}, target shape: {target.shape}")
+
         x = torch.cat([x, target], dim = 1)
         features = self.model(x)
         return self.att_mask(features), self.color_mask(features)

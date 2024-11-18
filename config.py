@@ -50,7 +50,7 @@ train_arg.add_argument("--data_dir", type=str,
                        help="Directory with celeb data")
 
 train_arg.add_argument("--learning_rate", type=float,
-                       default=1e-4,
+                       default=1e-5,
                        help="Learning rate (gradient step size)")
 
 train_arg.add_argument("--batch_size", type=int,
@@ -58,14 +58,15 @@ train_arg.add_argument("--batch_size", type=int,
                        help="Size of each training batch")
 
 #edit
-train_arg.add_argument("--lr_generator", type=float, default=0.0001,
+train_arg.add_argument("--lr_generator", type=float, default=0.00001,
                        help="Generator's Learning rate")
 train_arg.add_argument("--lr_discriminator", type=int,
-                       default=0.0001,
+                       default=0.000005,
                        help="Discriminator's Learning rate")
 train_arg.add_argument("--beta1", type=int,
                        default=0.5,
                        help="Size of each training batch")
+# increase to 0.7 if possible
 train_arg.add_argument("--beta2", type=int,
                        default=0.999,
                        help="Size of each training batch")
@@ -104,7 +105,7 @@ train_arg.add_argument('--lambda_sm',
                        help='weight for the attention smoothing loss')
 train_arg.add_argument('--critic_balance',
                        type=int,
-                       default=1, # change it to 5
+                       default=0.000001, # change it to 5
                        help='number of D updates per each G update')
 train_arg.add_argument('--lambda_sat',
                        type=float,
@@ -116,7 +117,7 @@ train_arg.add_argument('--lambda_rec',
                        help='weight for reconstruction loss')
 train_arg.add_argument('--lambda_masks',
                        type=float,
-                       default=0.0,
+                       default=0.1,
                        help='weight for attention masks')
 train_arg.add_argument('--num_epochs_decay',
                        type=int,
