@@ -761,6 +761,55 @@ def test(config):
 
             index_result += 1
             print("Testing _{}_ Done!".format(idx))
+def test_single_image(config, image_path, desired_au):
+    """Test routine for a single image."""
+
+    # Create model instances
+    G = Generate_GAN(config.nchannel_base_g, config.dim_labels, config.num_resnet_g)
+    D = Discriminate_GAN(config.trimg_size, config.nchannel_base_d, config.dim_labels, config.num_resnet_d)
+
+    # Move to GPU if available
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    G.to(device)
+    D.to(device)
+
+    # Load the best model
+    load_res = torch.load(os.path.join(config.save_dir, "checkpoint.pth"), map_location=device)
+    G.load_state_dict(load_res["generator"])
+    D.load_state_dict(load_res["discriminator"])
+
+    G.eval()  # Set the generator to evaluation mode
+    D.eval()  # Set the discriminator to evaluation mode
+
+    # Load and preprocess the image
+    from PIL import Image
+    import torchvision.transforms as transforms
+
+    # Define the transformations for the input image
+    transform = transforms.Compose([
+        transforms.Resize((config.trimg_size, config.trimg_size)),  # Resize to expected input size
+        transforms.ToTensor(),  # Convert image to tensor
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))  # Normalize the image
+    ])
+
+    # Open and process the input image
+    input_image = Image.open(image_path).convert("RGB")
+    input_tensor = transform(input_image).unsqueeze(0).to(device)  # Add batch dimension and move to device
+
+    # Prepare the desired AU tensor
+    desired_au_tensor = torch.FloatTensor(desired_au).unsqueeze(0).to(device)  # Convert to tensor and add batch dimension
+
+    # Generate the altered image
+    with torch.no_grad():  # Disable gradient computation
+        attmask_fake, colormask_fake = G(input_tensor, desired_au_tensor)
+        fake_image = attmask_fake * input_tensor + (1 - attmask_fake) * colormask_fake
+
+    # Save the generated image
+    output_image = save_numpy_img(fake_image.cpu().numpy()[0])  # Convert to numpy and remove batch dimension
+    output_path = os.path.join(config.result_dir, "generated_image.jpg")
+    output_image.save(output_path)
+
+    print(f"Generated image saved to {output_path}")
 
 
 def main(config):
